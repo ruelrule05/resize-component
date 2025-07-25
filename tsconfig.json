@@ -1,22 +1,15 @@
 {
   "compilerOptions": {
-    "target": "es2021",
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "noEmitOnError": true,
-    "lib": ["es2021", "dom", "DOM.Iterable"],
     "strict": true,
-    "esModuleInterop": false,
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
-    "outDir": "dist",
-    "sourceMap": true,
-    "inlineSources": true,
-    "rootDir": "./",
-    "declaration": true,
-    "incremental": true,
-    "skipLibCheck": true
-  },
-  "include": ["**/*.ts"]
+    "target": "esnext",
+    "allowJs": true,
+    "types": ["node", "mocha"],
+    "paths": {
+      "@neovici/cosmoz-utils/*": ["./node_modules/@neovici/cosmoz-utils/dist/*"]
+    }
+  }
 }

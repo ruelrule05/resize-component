@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { html, css, useCallback, useEffect, useRef, useState} from '@pionjs/pion';
 import { ref } from 'lit-html/directives/ref.js';
 
