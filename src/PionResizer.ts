@@ -21,12 +21,13 @@ export class PionResizer extends LitElement {
 
     #container {
       display: flex;
-      width: 100vw;
+      width: 100%;
       height: 100vh;
       background-color: #f9fafb;
     }
 
     .panel {
+      padding: 24px;
       box-sizing: border-box;
       overflow: auto;
       position: relative;
@@ -47,7 +48,7 @@ export class PionResizer extends LitElement {
     }
 
     #divider {
-      width: 1px;
+      width: 5px;
       background-color: #e5e7eb;
       cursor: col-resize;
       transition:
