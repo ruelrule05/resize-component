@@ -1,5 +1,5 @@
 import { html, css, LitElement } from 'lit';
-import { query, state } from 'lit/decorators.js';
+import { query, property } from 'lit/decorators.js';
 
 export class PionResizer extends LitElement {
   static styles = css`
@@ -48,7 +48,7 @@ export class PionResizer extends LitElement {
     }
 
     #divider {
-      width: 5px;
+      width: 8px;
       background-color: #e5e7eb;
       cursor: col-resize;
       transition:
@@ -58,7 +58,7 @@ export class PionResizer extends LitElement {
     }
 
     #divider:hover {
-      width: 10px;
+      width: 12px;
       background-color: #3b82f6;
     }
   `;
@@ -71,7 +71,8 @@ export class PionResizer extends LitElement {
 
   @query('#divider') private _divider!: HTMLDivElement;
 
-  @state() private _isResizing = false;
+  @property({ type: Boolean, reflect: true, attribute: 'is-resizing' })
+  private _isResizing = false;
 
   private _containerOffsetLeft = 0;
 
@@ -107,7 +108,6 @@ export class PionResizer extends LitElement {
     this._startWidth = this._leftPanel.getBoundingClientRect().width;
     this._isResizing = true;
 
-    document.body.classList.add('is-resizing');
     document.addEventListener('mousemove', this._onMouseMove);
     document.addEventListener('mouseup', this._onMouseUp);
   }
@@ -138,7 +138,6 @@ export class PionResizer extends LitElement {
 
   private _onMouseUp = () => {
     this._isResizing = false;
-    document.body.classList.remove('is-resizing');
     document.removeEventListener('mousemove', this._onMouseMove);
     document.removeEventListener('mouseup', this._onMouseUp);
   }
