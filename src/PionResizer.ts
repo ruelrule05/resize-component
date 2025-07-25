@@ -1,183 +1,198 @@
-import { html, css, LitElement } from 'lit';
-import { query, property } from 'lit/decorators.js';
+import { html, css, useCallback, useEffect, useRef, useState} from '@pionjs/pion';
+import { ref } from 'lit-html/directives/ref.js';
 
-export class PionResizer extends LitElement {
-  static styles = css`
-    :host {
-      display: block;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      color: #111827;
-    }
-
-    :host(.is-resizing) {
-      cursor: col-resize;
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-    }
-
-    #container {
-      display: flex;
-      width: 100%;
-      height: 100vh;
-      background-color: #f9fafb;
-    }
-
-    .panel {
-      padding: 24px;
-      box-sizing: border-box;
-      overflow: auto;
-      position: relative;
-    }
-
-    #left-panel {
-      width: var(--left-panel-width, 50%);
-      min-width: 200px;
-      background-color: #ffffff;
-      border-right: 1px solid #e5e7eb;
-    }
-
-    #right-panel {
-      flex-grow: 1;
-      width: var(--right-panel-width);
-      min-width: 200px;
-      background-color: #f9fafb;
-    }
-
-    #divider {
-      width: 8px;
-      background-color: #e5e7eb;
-      cursor: col-resize;
-      transition:
-        background-color 0.2s ease-in-out,
-        width 0.2s ease-in-out;
-      flex-shrink: 0;
-    }
-
-    #divider:hover {
-      width: 12px;
-      background-color: #3b82f6;
-    }
-  `;
-
-  @query('#container') private _container!: HTMLDivElement;
-
-  @query('#left-panel') private _leftPanel!: HTMLDivElement;
-
-  @query('#right-panel') private _rightPanel!: HTMLDivElement;
-
-  @query('#divider') private _divider!: HTMLDivElement;
-
-  @property({ type: Boolean, reflect: true, attribute: 'is-resizing' })
-  private _isResizing = false;
-
-  private _containerOffsetLeft = 0;
-
-
-  private _startX = 0;
-
-  private _startWidth = 0;
-
-  connectedCallback() {
-    super.connectedCallback();
-
-    this._onMouseDown = this._onMouseDown.bind(this);
-    this._onMouseMove = this._onMouseMove.bind(this);
-    this._onMouseUp = this._onMouseUp.bind(this);
+const styles = css`
+  :host {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    color: #111827;
   }
 
-  firstUpdated() {
-    this._divider.addEventListener('mousedown', this._onMouseDown);
+  :host([is-resizing]) {
+    cursor: col-resize;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
   }
 
-  disconnectedCallback() {
-    super.disconnectedCallback();
-
-    this._divider.removeEventListener('mousedown', this._onMouseDown);
-    document.removeEventListener('mousemove', this._onMouseMove);
-    document.removeEventListener('mouseup', this._onMouseUp);
+  #container {
+    display: flex;
+    width: 100%;
+    /* Use 100% to fill the host, not vh, for better encapsulation */
+    height: 100%;
+    background-color: #f9fafb;
   }
 
-  private _onMouseDown = (e: MouseEvent) => {
-    e.preventDefault();
-
-    this._startX = e.clientX;
-    this._startWidth = this._leftPanel.getBoundingClientRect().width;
-    this._isResizing = true;
-
-    document.addEventListener('mousemove', this._onMouseMove);
-    document.addEventListener('mouseup', this._onMouseUp);
+  .panel {
+    padding: 24px;
+    box-sizing: border-box;
+    overflow: auto;
+    position: relative;
   }
 
-  private _onMouseMove = (e: MouseEvent) => {
-    if (!this._isResizing) return;
+  #left-panel {
+    width: var(--left-panel-width, 50%);
+    min-width: 200px;
+    background-color: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    flex-shrink: 0;
+  }
 
-    let newLeftWidth = e.clientX - this._containerOffsetLeft;
+  #right-panel {
+    flex-grow: 1;
+    min-width: 200px;
+    background-color: #f9fafb;
+  }
 
-    const leftMinWidth = parseInt(getComputedStyle(this._leftPanel).minWidth, 10);
-    const rightMinWidth = parseInt(getComputedStyle(this._rightPanel).minWidth, 10);
+  #divider {
+    width: 8px;
+    background-color: #e5e7eb;
+    cursor: col-resize;
+    transition:
+      background-color 0.2s ease-in-out,
+      width 0.2s ease-in-out;
+    flex-shrink: 0;
+  }
+
+  #divider:hover {
+    width: 12px;
+    background-color: #3b82f6;
+  }
+`;
+
+interface PionResizerProps {
+  host: HTMLElement;
+}
+
+export const PionResizer = ({ host }: PionResizerProps) => {
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+
+  const [container, setContainer] = useState<Element>()
+  const [leftPanel, setLeftPanel] = useState<Element>()
+  const [rightPanel, setRightPanel] = useState<Element>()
+  const [divider, setDivider] = useState<Element>()
+
+  // const containerRef = useRef<HTMLDivElement>();
+  // const leftPanelRef = useRef<HTMLDivElement>();
+  // const rightPanelRef = useRef<HTMLDivElement>();
+
+  const containerOffsetLeft = useRef(0);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!container || !leftPanel || !rightPanel || !divider) return;
+    // if (
+    //   !leftPanelRef.current ||
+    //   !rightPanelRef.current ||
+    //   !containerRef.current ||
+    //   !dividerRef.current
+    // )
+    //   return;
+
+    let newLeftWidth = e.clientX - containerOffsetLeft.current;
+
+    const leftMinWidth = parseInt(
+      // getComputedStyle(leftPanelRef.current).minWidth,
+      getComputedStyle(leftPanel).minWidth,
+      10
+    );
+    const rightMinWidth = parseInt(
+      // getComputedStyle(rightPanelRef.current).minWidth,
+      getComputedStyle(rightPanel).minWidth,
+      10
+    );
+    // const containerWidth = containerRef.current.getBoundingClientRect().width;
+    // const dividerWidth = dividerRef.current.offsetWidth;
+
+    const containerWidth = container.getBoundingClientRect().width;
+    // @ts-ignore
+    const dividerWidth = divider.offsetWidth;
 
     if (newLeftWidth < leftMinWidth) {
       newLeftWidth = leftMinWidth;
     }
 
-    const containerWidth = this._container.getBoundingClientRect().width;
-    const dividerWidth = this._divider.offsetWidth;
-    if(containerWidth - newLeftWidth - dividerWidth < rightMinWidth) {
+    if (containerWidth - newLeftWidth - dividerWidth < rightMinWidth) {
       newLeftWidth = containerWidth - rightMinWidth - dividerWidth;
     }
 
-    const newRightWidth = containerWidth - newLeftWidth + dividerWidth;
+    // leftPanelRef.current.style.setProperty(
+    //   '--left-panel-width',
+    //   `${newLeftWidth}px`
+    // );
 
-    this._leftPanel.style.setProperty('--left-panel-width', `${newLeftWidth}px`);
-    this._rightPanel.style.setProperty('--right-panel-width', `${newRightWidth}px`);
-  }
+    leftPanel.style.setProperty('--left-panel-width', `${newLeftWidth}px`)
+  }, []);
 
-  private _onMouseUp = () => {
-    this._isResizing = false;
-    document.removeEventListener('mousemove', this._onMouseMove);
-    document.removeEventListener('mouseup', this._onMouseUp);
-  }
+  const handleMouseDown = useCallback((e: MouseEvent) => {
+    e.preventDefault();
+    // if (!containerRef.current) return;
 
-  render() {
-    return html`
-      <div id="container">
-        <div id="left-panel" class="panel">
-          <h2>Left Component</h2>
-          <p>
-            This is the left panel. You can resize it by dragging the divider on
-            the right.
-          </p>
-          <p>
-            Its minimum width is set to 200px. If the content overflows, a
-            scrollbar will appear.
-          </p>
-          <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua.
-          </p>
-        </div>
+    if (!container) return;
 
-        <div id="divider"></div>
+    containerOffsetLeft.current = container.getBoundingClientRect().left;
+      // containerRef.current.getBoundingClientRect().left;
+    setIsResizing(true);
+  }, []);
 
-        <div id="right-panel" class="panel">
-          <h2>Right Component</h2>
-          <p>
-            This is the right panel. It will automatically adjust its size as
-            you drag the divider.
-          </p>
-          <p>Its minimum width is also set to 200px.</p>
-          <p>
-            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris
-            nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
-            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-            pariatur.
-          </p>
-        </div>
+  useEffect(() => {
+    const div = divider;
+
+    if (div) {
+      div.addEventListener('mousedown', handleMouseDown);
+      return () => div.removeEventListener('mousedown', handleMouseDown);
+    }
+    return undefined;
+  }, [handleMouseDown]);
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+    return undefined;
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
+  useEffect(() => {
+    if (host) {
+      host.toggleAttribute('is-resizing', isResizing);
+    }
+  }, [isResizing, host]);
+
+  return html`
+    <style>
+      ${styles}
+    </style>
+    <div id="container" ${ref(setContainer)}>
+      <div id="left-panel" class="panel" ${ref(setLeftPanel)}>
+        <h2>Left Component</h2>
+        <p>
+          This is the left panel. You can resize it by dragging the divider on
+          the right.
+        </p>
       </div>
-    `;
-  }
-}
+
+      <div id="divider"  ${ref(setDivider)}></div>
+
+      <div id="right-panel" class="panel" ${ref(setRightPanel)}>
+        <h2>Right Component</h2>
+        <p>
+          This is the right panel. It will automatically adjust its size as you
+          drag the divider.
+        </p>
+      </div>
+    </div>
+  `;
+};
+
